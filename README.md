@@ -7,18 +7,17 @@
 
 ## 项目结构
 
-├── setup_env.ps1          # Windows下环境配置脚本
-├── notebooks/            # Jupyter Notebook文件
-│   ├── model_training.ipynb    # 模型训练与WSGG系数生成
-│   └── validation.ipynb  # 模型验证与误差分析
-├── src/                  # 核心源代码
-│   ├── models/           # RSM-WSGG数学模型定义
-│   ├── gas_rte_solver.py         # RTE求解器实现
-│   └── utils.py          # 辅助工具函数
-└── results/             # 输出结果目录
-    ├── coefficients.xlsx # 生成的WSGG系数表
-    └── img/         # 计算结果可视化图表
-
+- `setup_env.ps1`          # Windows 下环境配置脚本
+- `notebooks/`             # Jupyter Notebook 文件
+  - `model_training.ipynb` # 模型训练与 WSGG 系数生成
+  - `validation.ipynb`     # 模型验证与误差分析
+- `src/`                   # 核心源代码
+  - `models/`              # RSM-WSGG 数学模型定义
+  - `gas_rte_solver.py`    # RTE 求解器实现
+  - `utils.py`             # 辅助工具函数
+- `results/`               # 输出结果目录
+  - `coefficients.xlsx`    # 生成的 WSGG 系数表
+  - `img/`                 # 计算结果可视化图表
 ---
 
 ## 目录与文件说明
