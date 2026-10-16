@@ -142,11 +142,7 @@ CC BY 4.0），不求解化学反应。所取区间为摩尔比 $M_r$ 保持在�
 | 图 7（非等温均匀算例） | `case_validation_Case2.1/2.2_L1.0m.png` |
 | 图 8（非等温非均匀算例） | `case_validation_Case3.1/3.2_L1.0m.png` |
 | **图 9（真实火焰算例，新增）** | `case_validation_Case4.1_L1.0m.png`、`case_validation_Case4.2_L5.0m.png` |
-| **表 3（误差统计）** | `case_error_summary.tex` / `.csv` / `.png` |
-
-> **关于图表编号的说明**：在论文前一版本中，误差统计汇总被编为**图 9**，现改为**表 3**；
-> 新增的真实火焰图则编号为**图 9**。因此回复信中早期出现的"Figs. 2–9"实际指"全部插图
-> 及该汇总表"，现应理解为**"图 2–9 与表 3"**。最终编号请以论文排版稿为准。
+| **表 4（误差统计）** | `case_error_summary.tex` / `.csv` / `.png` |
 
 ---
 
