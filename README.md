@@ -122,11 +122,7 @@ python generate_validation_plots.py --groups all \
 | 4.1 | 1.0 m | 81 | 真实火焰剖面 |
 | 4.2 | 5.0 m | 81 | 同一火焰，较长光程 |
 
-Case 4.1 / 4.2 的温度与组分场直接取自已发表的**层流预混 NH₃/H₂/N₂–空气对冲火焰**
-一维解（Richter, Barlow, Dawson, Dreizler, Geyer, *Proc. Combust. Inst.* **42** (2026)，
-TU-Datalib，DOI [10.48328/tudatalib-2271](https://doi.org/10.48328/tudatalib-2271)，
-CC BY 4.0），不求解化学反应。所取区间为摩尔比 $M_r$ 保持在训练包络 $0.1 \le M_r \le 4.0$ 内的连续火焰前锋区域，
-温度 $T$ 从 423 K 至 1471 K；已燃尽区因 NH₃ 被消耗且 $M_r \to \infty$ 而剔除。
+Case 4.1 / 4.2 的温度与组分场直接取自已发表的**层流预混 NH₃/H₂/N₂–空气对冲火焰**一维解（Richter, Barlow, Dawson, Dreizler, Geyer, *Proc. Combust. Inst.* **42** (2026)，TU-Datalib，DOI [10.48328/tudatalib-2271](https://doi.org/10.48328/tudatalib-2271)，CC BY 4.0），不求解化学反应。所取区间为摩尔比 $M_r$ 保持在训练包络 $0.1 \le M_r \le 4.0$ 内的连续火焰前锋区域，温度 $T$ 从 423 K 至 1471 K；已燃尽区因 NH₃ 被消耗且 $M_r \to \infty$ 而剔除。
 
 ---
 
@@ -156,8 +152,7 @@ Wang 等模型声明的适用区间为 300–2300 K、压力光程 0.1–20 m。
 * 发射率–光程图中， $P_t L > 20$ bar·m 的区域以灰色底纹标出。
 
 严格的定量比较应仅在上述区间内进行。此外，两个模型基于不同的光谱数据库
-（本文为 HITEMP2010/HITRAN2020，Wang 等为 HITEMP2016/HITRAN2010），这也进一步限制了
-二者的直接可比性。
+（本文为 HITEMP2010/HITRAN2020，Wang 等为 HITEMP2016/HITRAN2010），这也进一步限制了二者的直接可比性。
 
 ---
 
