@@ -126,7 +126,7 @@ Case 4.1 / 4.2 的温度与组分场直接取自已发表的**层流预混 NH₃
 一维解（Richter, Barlow, Dawson, Dreizler, Geyer, *Proc. Combust. Inst.* **42** (2026)，
 TU-Datalib，DOI [10.48328/tudatalib-2271](https://doi.org/10.48328/tudatalib-2271)，
 CC BY 4.0），不求解化学反应。所取区间为摩尔比 $M_r$ 保持在训练包络 $0.1 \le M_r \le 4.0$ 内的连续火焰前锋区域，
-温度 $T$ 从 423 K 升至 1471 K；已燃尽区因 NH₃ 被消耗且 $M_r \to \infty$ 而剔除。
+温度 $T$ 从 423 K 至 1471 K；已燃尽区因 NH₃ 被消耗且 $M_r \to \infty$ 而剔除。
 
 ---
 
