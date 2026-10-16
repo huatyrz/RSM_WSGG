@@ -118,14 +118,7 @@ python generate_validation_plots.py --groups all \
 | **Fig. 7** — non-isothermal homogeneous cases | `case_validation_Case2.1/2.2_L1.0m.png` |
 | **Fig. 8** — non-isothermal inhomogeneous cases | `case_validation_Case3.1/3.2_L1.0m.png` |
 | **Fig. 9** — realistic-flame cases (new) | `case_validation_Case4.1_L1.0m.png`, `case_validation_Case4.2_L5.0m.png` |
-| **Table 3** — error statistics | `case_error_summary.tex` / `.csv` / `.png` |
-
-> **Note on figure numbering.** In the previous version of the manuscript the
-> error-statistics summary was numbered **Fig. 9**; it is now **Table 3**. The newly added
-> realistic-flame figure takes the number **Fig. 9**. Earlier references in the response
-> letter to *"Figs. 2–9"* therefore denoted "all figures *and* the summary table" and should
-> now be read as **"Figs. 2–9 and Table 3"**. Please also consult the manuscript itself for
-> the authoritative numbering of the final typeset version.
+| **Table 4** — error statistics | `case_error_summary.tex` / `.csv` / `.png` |
 
 ### 3.2 Validation cases and their data
 
