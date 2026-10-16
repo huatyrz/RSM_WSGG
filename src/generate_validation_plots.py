@@ -7,6 +7,8 @@ import argparse
 import importlib.util
 import math
 import sys
+import json
+import os
 from pathlib import Path
 from typing import Dict, List, Sequence, Tuple
 
@@ -17,6 +19,7 @@ from matplotlib.patches import Patch
 from matplotlib.ticker import AutoMinorLocator, LogLocator, MaxNLocator, NullFormatter
 from scipy.constants import sigma
 from scipy.stats import gaussian_kde
+from src.utils import read_from_excel, resolve_lbl_reference, PROFILES_DIR as _PROFILES_DIR
 
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
 if str(PROJECT_ROOT) not in sys.path:
@@ -93,11 +96,118 @@ def configure_publication_style() -> None:
     )
 
 
-def latest_coefficients_file(results_dir: Path) -> Path:
-    matches = sorted(results_dir.glob("coefficients_*.xlsx"), key=lambda item: item.stat().st_mtime)
-    if not matches:
-        raise FileNotFoundError(f"No coefficients_*.xlsx file found in {results_dir}")
-    return matches[-1]
+# def latest_coefficients_file(results_dir: Path) -> Path:
+#     matches = sorted(results_dir.glob("coefficients_*.xlsx"), key=lambda item: item.stat().st_mtime)
+#     if not matches:
+#         raise FileNotFoundError(f"No coefficients_*.xlsx file found in {results_dir}")
+#     return matches[-1]
+
+
+def load_coefficients_from_config(config_path: Path) -> Path:
+    """从 JSON 配置文件读取 coefficients 文件名"""
+    if not config_path.exists():
+        raise FileNotFoundError(f"Configuration file not found: {config_path}")
+
+    with config_path.open("r", encoding="utf-8") as f:
+        config = json.load(f)
+
+    file_value = config.get("coefficients_file")
+    if not file_value:
+        raise ValueError("'coefficients_file' is not specified in the configuration file")
+
+    file_path = Path(file_value)
+    if not file_path.is_absolute():
+        file_path = PROJECT_ROOT / "results" / file_path
+
+    if not file_path.exists():
+        raise FileNotFoundError(
+            f"Coefficients file does not exist: {file_path}"
+        )
+
+    return file_path
+
+
+def resolve_coefficients_file(args: argparse.Namespace) -> Path:
+    """
+    优先级：
+    1. --coefficients 命令行参数
+    2. 环境变量 COEFFICIENTS_FILE
+    3. config/coefficients.json
+    4. 报错
+    """
+
+    # 1. 命令行参数
+    if args.coefficients is not None:
+        coeff_path = Path(args.coefficients)
+        if not coeff_path.exists():
+            raise FileNotFoundError(
+                f"--coefficients file not found: {coeff_path}"
+            )
+        return coeff_path
+
+    # 2. 环境变量
+    env_path = os.environ.get("COEFFICIENTS_FILE")
+    if env_path:
+        coeff_path = Path(env_path)
+        if not coeff_path.exists():
+            raise FileNotFoundError(
+                f"COEFFICIENTS_FILE not found: {coeff_path}"
+            )
+        return coeff_path
+
+    # 3. 配置文件
+    config_path = PROJECT_ROOT / "config" / "coefficients.json"
+    if config_path.exists():
+        return load_coefficients_from_config(config_path)
+
+    # 4. 都没有
+    raise RuntimeError(
+        "No coefficients file specified.\n"
+        "Use one of the following:\n"
+        "  --coefficients <path>\n"
+        "  export COEFFICIENTS_FILE=<path>\n"
+        "  config/coefficients.json"
+    )
+
+
+def resolve_coefficients_file_for_notebook(
+    coefficients: str | Path | None = None
+) -> Path:
+    """
+    Notebook / script 专用：
+    优先级：
+    1. 显式传入路径
+    2. 环境变量 COEFFICIENTS_FILE
+    3. config/coefficients.json
+    4. 报错
+    """
+    # 1. 直接传入
+    if coefficients is not None:
+        path = Path(coefficients)
+        if not path.exists():
+            raise FileNotFoundError(f"Coefficients file not found: {path}")
+        return path
+
+    # 2. 环境变量
+    env_path = os.environ.get("COEFFICIENTS_FILE")
+    if env_path:
+        path = Path(env_path)
+        if not path.exists():
+            raise FileNotFoundError(f"COEFFICIENTS_FILE not found: {path}")
+        return path
+
+    # 3. 配置文件
+    config_path = PROJECT_ROOT / "config" / "coefficients.json"
+    if config_path.exists():
+        return load_coefficients_from_config(config_path)
+
+    raise RuntimeError(
+        "No coefficients file specified.\n"
+        "Use one of:\n"
+        "  resolve_coefficients_file_for_notebook('results/xxx.xlsx')\n"
+        "  export COEFFICIENTS_FILE=...\n"
+        "  config/coefficients.json"
+    )
 
 
 def load_emissivity_cube(file_path: Path) -> Tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
@@ -601,6 +711,8 @@ def wsgg_rsm_case_solution(
     total_q = np.zeros(len(xs), dtype=float)
     total_dq = np.zeros(len(xs), dtype=float)
     for gas_index in range(gray_count):
+        if not np.any(absorption[:, gas_index]):
+            continue          # 跳过透明气体
         i_b = sigma * np.power(temperature_profile, 4) * weights[:, gas_index] / np.pi
         i_b_left = sigma * boundary_temperature**4 * weights[0, gas_index] / np.pi
         i_b_right = sigma * boundary_temperature**4 * weights[-1, gas_index] / np.pi
@@ -624,9 +736,14 @@ def wsgg_wang_case_solution(
     absorption = np.zeros((len(xs), 5), dtype=float)
     for index in range(len(xs)):
         weights[index], absorption[index] = wang.get_k_a(float(temperature_profile[index]), float(x_h2o[index] / x_nh3[index]), 4, coefficients, range_dict)
+    # Wang 系数在 P*X = 0.2 bar 标定；按当地分压线性重标定
+    # Cases 1-3 中 X=0.2、P=1 时因子为 1（no-op）；真实火焰 X 变化时必须缩放
+    absorption *= (1 * (x_h2o + x_nh3) / 0.2).reshape(-1, 1)
     total_q = np.zeros(len(xs), dtype=float)
     total_dq = np.zeros(len(xs), dtype=float)
     for gas_index in range(5):
+        if not np.any(absorption[:, gas_index]):
+            continue          # 跳过透明气体
         i_b = sigma * np.power(temperature_profile, 4) * weights[:, gas_index] / np.pi
         i_b_left = sigma * boundary_temperature**4 * weights[0, gas_index] / np.pi
         i_b_right = sigma * boundary_temperature**4 * weights[-1, gas_index] / np.pi
@@ -665,7 +782,8 @@ def plot_case_validation(
         _, length_tag = filename.split("_")
         length_value = float(length_tag[1:-1])
         profile = np.load(file_path, allow_pickle=False)
-        reference_results = np.load(PROJECT_ROOT / "results" / f"{filename}.npy") / 1e3
+        # reference_results = np.load(PROJECT_ROOT / "results" / f"{filename}.npy") / 1e3
+        reference_results = np.load(resolve_lbl_reference(f"{filename}.npy")) / 1e3
         xs = profile["x"]
         x_rel = xs / length_value if length_value > 0 else xs
         temperature_profile = profile["T"]
@@ -808,7 +926,10 @@ def plot_case_error_summary(summary_rows: List[Dict[str, float]], output_dir: Pa
 def main() -> int:
     args = parse_args()
     configure_publication_style()
-    coeff_file = args.coefficients or latest_coefficients_file(PROJECT_ROOT / "results")
+    # coeff_file = args.coefficients or latest_coefficients_file(PROJECT_ROOT / "results")
+    coeff_file = resolve_coefficients_file(args)
+    print(f"Using coefficient file: {coeff_file}")
+    print(f"Output directory: {args.output_dir}")
     beta, gamma = read_from_excel(str(coeff_file))
     beta = np.asarray(beta, dtype=float)
     gamma = np.asarray(gamma, dtype=float)

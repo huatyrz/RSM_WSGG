@@ -25,13 +25,36 @@ from scipy.constants import sigma
 import glob
 import os
 import math
+import sys as _sys
+from pathlib import Path as _Path
 
+# ---- 统一路径：优先 config/path.py，读不到时按文件位置回退 ----
+_SRC_DIR = _Path(__file__).resolve().parent
+_PROJECT_ROOT_GUESS = _SRC_DIR.parent
+if str(_PROJECT_ROOT_GUESS) not in _sys.path:
+    _sys.path.insert(0, str(_PROJECT_ROOT_GUESS))
+
+try:
+    from config import path as _cfg_path
+    PROJECT_ROOT = _Path(_cfg_path.PROJECT_ROOT)
+    PROFILES_DIR = _Path(_cfg_path.PROFILES_DIR)
+    LBL_DIR      = _Path(_cfg_path.LBL_DIR)
+    ABSCDB_DIR   = _Path(_cfg_path.ABSCDB_DIR)
+except ImportError:
+    PROJECT_ROOT = _PROJECT_ROOT_GUESS
+    PROFILES_DIR = PROJECT_ROOT / "input" / "profiles"
+    LBL_DIR      = PROJECT_ROOT / "results" / "lbl"
+    ABSCDB_DIR   = PROJECT_ROOT / "abscDB"
+    
 # 定义黑体辐射计算相关常数
 C1 = 2*constants.pi*constants.h*constants.c**2 * 1e8  # 第一辐射常数（转换单位后）
 C2 = constants.h*constants.c/constants.k*1e2       # 第二辐射常数（转换单位后）
 
 # 吸收系数数据库路径和参数网格定义
-ABSC_DB = "../AbscDB"
+try:
+    ABSC_DB = str(ABSCDB_DIR)
+except NameError:
+    ABSC_DB = "../AbscDB"
 X_GRID = np.linspace(0, 1, 5)          # 浓度插值网格 (H2O, NH3的摩尔分数)
 T_GRID = np.arange(300.0, 3001.0, 100.0)  # 温度插值网格 (K)
 
@@ -198,8 +221,10 @@ def solve_rte(xs, kappas, I_bs, I_b1, I_b2):
         idx1 = taus <= tau
         idx2 = taus >= tau
 
-        integral_term1 = np.trapz(I_bs[idx1], expn(2, tau - taus[idx1]))
-        integral_term2 = np.trapz(np.ascontiguousarray(I_bs[idx2][::-1]), np.ascontiguousarray(expn(2, taus[idx2] - tau)[::-1]))
+        # integral_term1 = np.trapz(I_bs[idx1], expn(2, tau - taus[idx1]))
+        # integral_term2 = np.trapz(np.ascontiguousarray(I_bs[idx2][::-1]), np.ascontiguousarray(expn(2, taus[idx2] - tau)[::-1]))
+        integral_term1 = np.trapezoid(I_bs[idx1], expn(2, tau - taus[idx1]))
+        integral_term2 = np.trapezoid(np.ascontiguousarray(I_bs[idx2][::-1]),np.ascontiguousarray(expn(2, taus[idx2] - tau)[::-1]))
         
         G[i] = 2 * np.pi * (term1[i] + term2[i] + integral_term1 + integral_term2)
     
@@ -212,8 +237,10 @@ def solve_rte(xs, kappas, I_bs, I_b1, I_b2):
         idx1 = taus <= tau
         idx2 = taus >= tau
 
-        integral_term1 = np.trapz(I_bs[idx1], expn(3, tau - taus[idx1]))
-        integral_term2 = np.trapz(np.ascontiguousarray(I_bs[idx2][::-1]), np.ascontiguousarray(expn(3, taus[idx2] - tau)[::-1]))
+        # integral_term1 = np.trapz(I_bs[idx1], expn(3, tau - taus[idx1]))
+        # integral_term2 = np.trapz(np.ascontiguousarray(I_bs[idx2][::-1]), np.ascontiguousarray(expn(3, taus[idx2] - tau)[::-1]))
+        integral_term1 = np.trapezoid(I_bs[idx1], expn(3, tau - taus[idx1]))
+        integral_term2 = np.trapezoid(np.ascontiguousarray(I_bs[idx2][::-1]),np.ascontiguousarray(expn(3, taus[idx2] - tau)[::-1]))
         
         q[i] = 2 * np.pi * (term1[i] - term2[i] + integral_term1 - integral_term2)
 
@@ -237,10 +264,19 @@ def compute_chunk(kappas_chunk, i_b_etas_chunk, xs, I_b1_chunk, I_b2_chunk, d_wn
         dq_chunk += dq * d_wn
     return G_chunk, q_chunk, dq_chunk
 
-def getLBLsolution(T_l, T_r, P_tot):
+def getLBLsolution(T_l, T_r, P_tot, output_dir=None):
+    """计算所有工况的 LBL 参考解。
 
+    output_dir 默认用 config/path.py 里的 LBL_DIR（绝对路径，不依赖 cwd）。
+    """
+    out_dir = _Path(output_dir) if output_dir is not None else _Path(LBL_DIR)
+    out_dir.mkdir(parents=True, exist_ok=True)
+    print(f"LBL results -> : {out_dir}")
+    
     # 数据存储目录
-    DATA_DIR = "../input/profiles"
+    # DATA_DIR = "../input/profiles"
+    DATA_DIR = str(PROFILES_DIR)
+    print(f"Profiles from : {DATA_DIR}")
     
     # 获取所有.npy文件路径
     case_files = glob.glob(os.path.join(DATA_DIR, "Case*.npy"))
@@ -311,7 +347,8 @@ def getLBLsolution(T_l, T_r, P_tot):
         ans = np.vstack([final_G, final_q, final_dq]).T
         # np.save(f"./results/h2o_nh3_{i:02d}.npy", ans)
         # 保存文件时添加区间标识（例如：h2o_nh3_00_0.0_0.1.npy）
-        np.save(f"../results/{case_id}_L{L}m.npy", ans)  # 关键修改点
+        # np.save(f"../results/{case_id}_L{L}m.npy", ans)  # 关键修改点
+        np.save(out_dir / f"{case_id}_L{L}m.npy", ans)
 
 
 def solve_wsgg_dom(temperature_profiles, rsm_a, rsm_k, xs, T_l, T_r, epsilon=1.0, n_angles=8):

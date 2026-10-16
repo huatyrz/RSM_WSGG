@@ -71,7 +71,7 @@ def case32_h2o(x: np.ndarray, L: float) -> np.ndarray:
     """Case3.2 H2O分布 (Eq.29)"""
     return 0.14 - 0.02 * np.cos(2 * np.pi * x / L)
 
-def case32_h2o(x: np.ndarray, L: float) -> np.ndarray:
+def case32_nh3(x: np.ndarray, L: float) -> np.ndarray:
     """Case3.2 NH3分布 (Eq.30)"""
     return 0.06 + 0.02 * np.cos(2 * np.pi * x / L)
 
@@ -93,7 +93,7 @@ CASE_CONFIGS = [
     
     # Case3 子工况组 (不同H2O、NH3分布)
     {"case_id": "3.1", "temp_func": gradient_temp_v1, "y_h2o": case31_h2o, "y_nh3": case31_nh3, "mix_ratio": None},
-    {"case_id": "3.2", "temp_func": gradient_temp_v1, "y_h2o": case32_h2o, "y_nh3": case31_nh3, "mix_ratio": None}
+    {"case_id": "3.2", "temp_func": gradient_temp_v1, "y_h2o": case32_h2o, "y_nh3": case32_nh3, "mix_ratio": None}
 ]
 
 
@@ -104,8 +104,8 @@ def generate_profiles(
     case_configs: List[Dict],
     l_values: List[float],
     n_points: int,
-    output_dir: str,
-    selected_cases: List[str]
+    output_dir: "str | None" = None,          # ← 默认 None → config PROFILES_DIR
+    selected_cases: "List[str] | None" = None, # ← 也给了默认（否则参数顺序报错）
 ) -> None:
     """生成所有工况的辐射参数文件
     
@@ -116,6 +116,25 @@ def generate_profiles(
         output_dir: 输出目录路径
         selected_cases: 要生成的案例ID列表（空列表表示全部）
     """
+    # output_dir 为空时用 config/path.py 的 PROFILES_DIR（绝对路径）
+    if output_dir is None:
+        try:
+            from config import path as _cfg
+            output_dir = str(_cfg.PROFILES_DIR)
+        except ImportError:
+            import sys as _sys
+            from pathlib import Path as _P
+            _root = _P(__file__).resolve().parent.parent
+            if str(_root) not in _sys.path:
+                _sys.path.insert(0, str(_root))
+            try:
+                from config import path as _cfg
+                output_dir = str(_cfg.PROFILES_DIR)
+            except ImportError:
+                output_dir = str(_root / "input" / "profiles")
+
+    if selected_cases is None:
+        selected_cases = []      # 空列表 = 全部工况（沿用原语义）
     os.makedirs(output_dir, exist_ok=True)
 
     # 过滤选择的案例
@@ -217,7 +236,6 @@ if __name__ == "__main__":
         case_configs=CASE_CONFIGS,
         l_values=L_VALUES,
         n_points=N_POINTS,
-        output_dir=OUTPUT_DIR,
         selected_cases=SELECTED_CASES  # 传入选择的案例ID列表
     )
     print(f"生成完成! 文件保存在: {os.path.abspath(OUTPUT_DIR)}")

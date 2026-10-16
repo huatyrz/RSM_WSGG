@@ -1,7 +1,74 @@
 import pandas as pd
 import numpy as np
 import torch
+# ---------------------------------------------------------------------------
+# 路径：统一走 config/path.py，读不到时按文件位置回退
+# ---------------------------------------------------------------------------
+import sys
+from pathlib import Path as _Path
 
+_SRC_DIR = _Path(__file__).resolve().parent
+_FALLBACK_ROOT = _SRC_DIR.parent
+
+if str(_FALLBACK_ROOT) not in sys.path:
+    sys.path.insert(0, str(_FALLBACK_ROOT))
+
+try:
+    from config import path as _cfg
+    PROJECT_ROOT = _Path(_cfg.PROJECT_ROOT)
+    LBL_DIR = _Path(_cfg.LBL_DIR)
+except ImportError:
+    PROJECT_ROOT = _FALLBACK_ROOT
+    LBL_DIR = _FALLBACK_ROOT / "results" / "lbl"
+
+def lbl_results_dir(project_root=None, subdir=None):
+    """返回 LBL 参考解目录；默认用 config 里的 LBL_DIR。"""
+    directory = _Path(LBL_DIR if project_root is None
+                      else _Path(project_root) / "results" / "lbl")
+    directory.mkdir(parents=True, exist_ok=True)
+    return directory
+
+def resolve_lbl_reference(filename, project_root=None):
+    """定位某个工况的 LBL 参考解。
+
+    优先 results/lbl/<filename>；回退旧的 results/<filename>；都没有则返回新路径。
+    """
+    base = (_Path(project_root) if project_root is not None else PROJECT_ROOT) / "results"
+    preferred = base / "lbl" / filename
+    if preferred.exists():
+        return preferred
+    legacy = base / filename
+    if legacy.exists():
+        return legacy
+    return preferred
+
+def lbl_results_dir(project_root=None, subdir=None):
+    """返回 LBL 参考解目录；默认用 config 里的 LBL_DIR。"""
+    directory = _Path(LBL_DIR if project_root is None
+                      else _Path(project_root) / "results" / "lbl")
+    directory.mkdir(parents=True, exist_ok=True)
+    return directory
+
+def resolve_lbl_reference(filename, project_root=None):
+    """定位某个工况的 LBL 参考解。
+
+    优先 results/lbl/<filename>；回退旧的 results/<filename>；都没有则返回新路径。
+    """
+    base = (_Path(project_root) if project_root is not None else PROJECT_ROOT) / "results"
+    preferred = base / "lbl" / filename
+    if preferred.exists():
+        return preferred
+    legacy = base / filename
+    if legacy.exists():
+        return legacy
+    return preferred
+
+# 补 PROFILES_DIR（generate_validation_plots.py 第 22 行需要）
+try:
+    PROFILES_DIR = _Path(_cfg.PROFILES_DIR)
+except (ImportError, AttributeError):
+    PROFILES_DIR = PROJECT_ROOT / "input" / "profiles"
+    
 def print_formatted_arrays(beta, gamma):
     """格式化打印系数矩阵"""
     # 打印Beta表格
